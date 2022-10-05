@@ -107,6 +107,6 @@ ON p.currentversionid = v.id
 ';
 $res = $DB->get_records_sql($query, array((int)$USER->id));
 //get_records("tool_policy_acceptances", array("userid" => (int)$USER->id ));
-echo '<policy-container>Hallo</policy-container>';
+echo '<policy-container></policy-container>';
 $PAGE->requires->js_call_amd('local_policy_overview/Policy', 'init', array('policies' => $res, 'message' => $message, 'backurl' => $policy_back));
 echo $OUTPUT->footer();
