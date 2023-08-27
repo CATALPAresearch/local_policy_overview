@@ -6,48 +6,48 @@ global $USER, $PAGE, $DB;
 $PAGE->set_context($context);
 require_login();
 
+// transfer of the columns to be checked
+$userid =  $_POST['userid'];
 
-  // read DB content
-  $DBListe = $DB->get_records_sql(
-    '
-    SELECT TABLE_NAME, COLUMN_NAME  
-    FROM INFORMATION_SCHEMA.COLUMNS  
-    WHERE column_name LIKE "userid" OR
-    column_name LIKE "user_id"
-    and "userid" IS NOT NULL
-    and "user_id" IS NOT NULL
-    AND TABLE_SCHEMA="moodle"
-    '
-  );
+// Create an empty string
+$sql = '';
+
+// Get a list of all tables in the database
+$tables = $DB->get_records_sql("SELECT TABLE_NAME FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_SCHEMA = 'moodle'");
+
+// For each table, add a separate SELECT query
+foreach ($tables as $key => $inside) {
+    foreach ($inside as $inner_key => $value1) {
+
+        // Run the SQL query and get the results
+        $sql1 = "SELECT * FROM $value1";
+        $results = $DB->get_records_sql($sql1);
+
+        // save Table in File
+        $filename = $value1.".csv";
+        $file = fopen($filename, 'w');
+
+        foreach ($results as $fields) {
+        if( is_object($fields) )
+        $fields = (array) $fields;
+        fputcsv($file, $fields, ";");
+        }   
+        fclose($file);
+
+        // create Zip-File
+        $zip = new ZipArchive();
+        $zip->open('download.zip', ZipArchive::CREATE);
+        $zip->addFile($filename);
+        $zip->close();
+    }
+}
+
+   // donwload Zip-File
+        $zipname = "download.zip";
+        $application="application/zip";
+        header( "Content-Type: $application" ); // Specify the format here
+        header( "Content-Disposition: attachment; filename= download.zip" ); // Enter the file name here that is displayed as the default file name when downloading
+        //header("Content-Length: ". filesize($filename));
+        readfile($zipname); // Here the path + filename of the source image on the web server
    
-
-  // save Table in File
-  $filename = "hallo.csv";
-  $file = fopen($filename, 'w');
-  foreach ($DBListe as $fields) {
-  if( is_object($fields) )
-     $fields = (array) $fields;
-     fputcsv($file, $fields, ";");
-  }   
-  fclose($file);
-
-
-  //$filename = "datenbankoverview.csv";
-
-
-  // create Zip-File
-  $zip = new ZipArchive();
-  $zip->open('download.zip', ZipArchive::CREATE);
-  $zip->addFile($filename);
-  $zip->close();
-
-
-  // donwload Zip-File
-  $zipname = "download.zip";
-  $application="application/zip";
-  header( "Content-Type: $application" ); // Hier das Format des Bilds angeben
-  header( "Content-Disposition: attachment; filename= download.zip" ); // Hier den Dateinamen angeben, der als Standarddateiname beim Download angezeigt wird
-  header("Content-Length: ". filesize($filename));
-  readfile($zipname); // Hier der Pfad + Dateinamen des Quellbilds auf dem Webserver
-      
 ?>
