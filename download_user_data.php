@@ -2,7 +2,7 @@
 
 require_once dirname(__FILE__) . '/../../config.php';
 $context = context_system::instance();
-global $USER, $PAGE, $DB, $USER2;
+global $USER, $PAGE, $DB;
 $PAGE->set_context($context);
 require_login();
 
@@ -61,17 +61,8 @@ function exportTableToCSV($DB, $selectedcolumn, $chosentable, $USER, $tempDir){
    return $filename;
 }
 
-// Path to the config.php file
-$configPath = $_SERVER['DOCUMENT_ROOT'] . '/moodle/config.php';
-
-// Read the contents of the config.php file
-$configContent = file_get_contents($configPath);
-
-// Search for the database name
-preg_match("/\$CFG->dbname\s*=\s*'([^']+)'/", $configContent, $matches);
-
-// The database name is in the first capturing group match
-$databaseName = $matches[1];
+// Path to the config.php file and search for the database name
+$databaseName = $CFG->dbname;
 
 // Get all tables
 $sql3 = "SELECT TABLE_NAME FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_SCHEMA = '$databaseName'";
@@ -87,7 +78,7 @@ foreach ($tableschema as $key => $tablename) {
          if(in_array($requested_fields[$i], array_keys($columnExists))){
             if(fieldExistsInTable($DB, $requested_fields[$i], $chosentable)){
                //echo 'found ' . $requested_fields[$i] . '  in table ' . $chosentable . '<br>';
-               $filename = exportTableToCSV($DB, $requested_fields[$i], $chosentable, 0,$tempDir);
+               $filename = exportTableToCSV($DB, $requested_fields[$i], $chosentable, $USER->id,$tempDir);
                if (file_exists($filename) && pathinfo($filename, PATHINFO_EXTENSION) == 'csv') {
                   // Check whether the table contains content
                   $fileContents = file_get_contents($filename);
@@ -96,8 +87,7 @@ foreach ($tableschema as $key => $tablename) {
                   if (substr_count($fileContents, '0') > 1) {
                      $zip->addFile($filename, basename($filename));
                   }
-                  }
-       
+               }
             }
          }
       }
