@@ -1,141 +1,179 @@
 <?php
+require_once dirname(__FILE__) . '/../../config.php';
 
-class Userdata{
+class MyPage {
+    private $context;
+    private $user;
+    private $page;
+    private $db;
+    private $CFG;
+    private $tableschema;
+    private $selectedcolumn;
+    private $chosentable;
+    private $tempDir;
+    private $zip;
+    private $zipname;
+    private $requested_fields;
+    private $columnExists;
+    private $filename;
+    private $file;
+    private $tablename;
 
-//                                  //
-// characteristics / Eigenschaften  //
-//                                  //
-   require_once dirname(__FILE__) . '/../../config.php';
-   $context = context_system::instance();
-   global $USER, $PAGE, $DB;
-   $PAGE->set_context($context);
-   require_login();
 
-//                            //
-// constructor / konstruktor  //
-//                            //
-   public function __construct(){
-     
-   }
+    public function __construct() {
+        $this->context = context_system::instance();
+        $this->user = $GLOBALS['USER'];
+        $this->page = $GLOBALS['PAGE'];
+        $this->db = $GLOBALS['DB'];
 
-//                    //
-// Methoden / Methods //
-//                    //
-   /**
-    * Check if field exists in Table
-    * @DB
-    * @$selectedcolumn
-    * @$chosentable
-    * @return Bool
-    */
-   public function fieldExistsInTable($DB, $selectedcolumn, $chosentable){
-      $sqlCheck = "SHOW COLUMNS FROM `$chosentable` WHERE Field = :selectedcolumn ;";
-      $columnExists = $DB->get_records_sql($sqlCheck, ["selectedcolumn" => $selectedcolumn ]);
-      return !empty($columnExists);
-   }
+        $this->tempDir = sys_get_temp_dir() . '/' . uniqid('temp_', true);
+        mkdir($this->tempDir);
+    }
+    
 
-   /**
-    * Exports user-related rows of a table to csv file
-    * @DB
-    * @$selectedcolumn
-    * @$chosentable
-    * @return Bool
-    */
-   public function exportTableToCSV($DB, $selectedcolumn, $chosentable, $USER, $tempDir){
-      $sql4 = "SELECT * FROM `$chosentable` WHERE $selectedcolumn = :current_user";
-      $results = $DB->get_records_sql($sql4, [ "current_user" => $USER ]);
-   
-      // File name for the CSV file in the temporary folder
-      $filename = $tempDir . '/' . $chosentable . ".csv";
+    /**
+     * create a Zipfile
+     * @DB
+     * @$selectedcolumn
+     * @$chosentable
+     * @return
+     */
+    public function createZipFile() {
+      $this->requested_fields = ['userid', 'user_id'];
+      $this->zip = new ZipArchive();
+      $this->zip->open($this->tempDir . '/download.zip', ZipArchive::CREATE);
 
-      // Create CSV file in temporary folder
-      $file = fopen($filename, 'w');
+      // Add files to the zip archive
+      foreach ($this->requested_fields as $field) {
+          $filename = $this->tempDir . '/' . $field . '.csv';
+          $file = fopen($filename, 'w');
+          fputcsv($file, [$field]);
+          fclose($file);
 
+          $this->zip->addFile($filename);
+       }
+       $this->zip->close();
+    }
+  
+
+    /**
+     * download selected tables to a zip folder
+     * @DB
+     * @$selectedcolumn
+     * @$chosentable
+     * @return
+     */
+    public function downloadFile() {
+        $this->zipname = $this->tempDir . '/download.zip';
+
+        $application = "application/zip";
+        header("Content-Type: $application");
+        header("Content-Disposition: attachment; filename=download.zip");
+        readfile($this->zipname);
+        unlink($this->zipname);
+        array_map('unlink', glob("$this->tempDir/*"));
+        rmdir($this->tempDir);
+    }   
+
+
+    /**
+     * Check if field exists in Table
+     * @DB
+     * @$selectedcolumn
+     * @$chosentable
+     * @return Bool
+     */
+    public function fieldExistsInTable(){
+        $sqlCheck = "SHOW COLUMNS FROM `$this->chosentable` WHERE Field = :selectedcolumn ;";
+        $this->columnExists = $this->db->get_records_sql($sqlCheck, ["selectedcolumn" => $this->selectedcolumn]);
+        //return !empty($columnExists);
+     }
+
+    
+    /**
+     * Exports user-related rows of a table to csv file
+     * @DB
+     * @$selectedcolumn
+     * @$chosentable
+     * @return Bool
+     */
+    public function exportTableToCSV() {
+      $sql4 = "SELECT * FROM `$this->chosentable` WHERE $this->selectedcolumn = :current_user";
+      $results = $this->db->get_records_sql($sql4, ["current_user" => $this->user]);
+  
+      $this->filename = $this->tempDir . '/' . $this->chosentable . ".csv";
+      $this->file = fopen($this->filename, 'w');
+  
       // Write the table headers to the CSV file
       $header = array_keys((array) reset($results));
-      fputcsv($file, $header, ";");
-
+      fputcsv($this->file, $header, ";");
+  
       foreach ($results as $result) {
-         $row = [];
-         foreach ($result as $column => $value) {
-            $row[] = $value;
-         }
-         fputcsv($file, $row, ";");
-      }
-
-      fclose($file);
-      return $filename;
-   }
-
-   /**
-    * Exports user-related rows of a table to csv file
-    * @DB
-    * @
-    * @
-    * @return none
-    */
-    public function start(){
-       // Temporären Ordner erstellen
-       $tempDir = sys_get_temp_dir() . '/' . uniqid('temp_', true);
-       mkdir($tempDir);
- 
-       // Set variables and initializes files
-       $requested_fields = ['userid', 'user_id']; // We'll possible add some more columns containing user-related data
-       $zip = new ZipArchive();
-       $zip->open('download.zip', ZipArchive::CREATE);
- 
-       // Path to the config.php file and search for the database name
-       $databaseName = $CFG->dbname;
- 
-       // Get all tables
-       $sql3 = "SELECT TABLE_NAME FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_SCHEMA = '$databaseName'";
-       $tableschema = $DB->get_records_sql($sql3);
- 
-       // iterate over all tables
-       foreach ($tableschema as $key => $tablename) {
-          foreach ($tablename as $inner_key => $chosentable) {
-             // get fields of the table
-             $fields_query = "SELECT column_name FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME=:tablename";
-             $columnExists = $DB->get_records_sql($fields_query, [ "tablename" => $chosentable ]);
-             for($i=0; $i < count($requested_fields); $i++){
-                if(in_array($requested_fields[$i], array_keys($columnExists))){
-                   if(fieldExistsInTable($DB, $requested_fields[$i], $chosentable)){
-                      //echo 'found ' . $requested_fields[$i] . '  in table ' . $chosentable . '<br>';
-                      $filename = exportTableToCSV($DB, $requested_fields[$i], $chosentable, 2,$tempDir);
-                      if (file_exists($filename) && pathinfo($filename, PATHINFO_EXTENSION) == 'csv') {
-                         // Check whether the table contains content
-                         $fileContents = file_get_contents($filename);
-                         // It just needs to be fliered zero because incorrectly 
-                         // writing the header writes a zero.
-                         if (substr_count($fileContents, '0') > 1) {
-                            $zip->addFile($filename, basename($filename));
-                         }
-                      }
-                   }
-                }
-             }
+          $row = [];
+          foreach ($result as $column => $value) {
+              $row[] = $value;
           }
-       }
-       $zip->close();
- 
-       $zipname = "download.zip";
-       $application="application/zip";
-       header( "Content-Type: $application" ); // Specify the format here
-       header( "Content-Disposition: attachment; filename= download.zip" ); // Enter the file name here that is displayed as the default file name when downloading
-       //header("Content-Length: ". filesize($filename));
-       readfile($zipname); // Here the path + filename of the source image on the web server
-       unlink($zipname);
- 
-       // Delete the temporary folder
-       array_map('unlink', glob("$tempDir/*"));
-       rmdir($tempDir);
+          fputcsv($this->file, $row, ";");
+      }
+  
+      fclose($this->file);
     }
-}
 
-//                                  //
-// Initialisierung / initialization //
-//                                  //
-   $userdata = new Userdata();
-   $userdata->start();
+
+    /**
+     * select and download tables
+     * @DB
+     * @$selectedcolumn
+     * @$chosentable
+     * @return 
+     */
+   public function exportTables() {
+      $databaseName = $this->CFG->dbname;
+      $sql3 = "SELECT TABLE_NAME FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_SCHEMA = '$databaseName'";
+      $this->tableschema = $this->db->get_records_sql($sql3);
+
+      foreach ($this->tableschema as $key => $this->tablename) {
+        foreach ($this->tablename as $inner_key => $this->chosentable) {
+            $fields_query = "SELECT column_name FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME=:tablename";
+            $this->columnExists = $this->db->get_records_sql($fields_query, [ "tablename" => $this->chosentable ]);
+
+            for($i=0; $i < count($this->requested_fields); $i++){
+                if(in_array($this->requested_fields[$i], array_keys($this->columnExists))){
+                    if($this->fieldExistsInTable()){
+                      
+                       $this->exportTableToCSV();
+                        if (file_exists($this->filename) && pathinfo($this->filename, PATHINFO_EXTENSION) == 'csv') {
+                            $fileContents = file_get_contents($this->filename);
+
+                            if (substr_count($fileContents, '0') > 1) {
+                                $this->zip->addFile($this->filename, basename($this->filename));
+                            }
+                        }
+                    }
+                }
+            }
+        }
+      }
+    }
+  
+
+    /**
+     * start function
+     * @DB
+     * @$selectedcolumn
+     * @$chosentable
+     * @return 
+     */
+    public function run() {
+        $this->page->set_context($this->context);
+        require_login();
+        $this->createZipFile();
+        $this->exportTables();
+        $this->downloadFile();
+    }
+} //Ende of class
+
+$page = new MyPage();
+$page->run();
 
 ?>
