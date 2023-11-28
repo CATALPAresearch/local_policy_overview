@@ -28,7 +28,7 @@ class DownloadUserData
     }
 
     /**
-     * 
+     * Setup the temporary files and folders
      */
     private function setup(){
         // Create temporary folder
@@ -42,11 +42,10 @@ class DownloadUserData
     }
 
     /**
-     * 
+     * Traverses all tables and extract data of those containing information about the given user.
      */
     private function exportTables()
-    {
-        
+    {   
         // Get all tables
         $sql3 = "SELECT TABLE_NAME FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_SCHEMA = '$this->databaseName'";
         $tableschema = $this->db->get_records_sql($sql3);
@@ -97,7 +96,7 @@ class DownloadUserData
     }
 
     /**
-     * 
+     * Write a resultset of the database into a CSV file
      */
     private function writeTableAsCSV($results, $chosentable){
         // Create and open CSV file
