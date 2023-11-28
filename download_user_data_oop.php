@@ -1,5 +1,7 @@
 <?php
-class DSGVOrequirements {
+global $USER;
+class DownloadUserData {
+    private $databaseName;
     private $context;
     private $user;
     private $page;
@@ -9,7 +11,7 @@ class DSGVOrequirements {
     public function __construct() {
         require_once dirname(__FILE__) . '/../../config.php';
         $this->databaseName = $CFG->dbname;
-        $this->user =  $CFG->dbuser;
+        $this->user =  $USER->id;//$CFG->dbuser;
         $this->page = $GLOBALS['PAGE'];
         $this->db = $GLOBALS['DB'];
         $this->requested_fields = ['userid', 'user_id'];
@@ -113,5 +115,6 @@ class DSGVOrequirements {
     }//END exportTables
 }//END CLASS
 
-$page = new DSGVOrequirements();
+$page = new DownloadUserData();
+
 ?>
