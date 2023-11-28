@@ -106,6 +106,11 @@ define([
                                 </span>
                             </div>
                         </div>
+                        <div>
+                            <form action="download_user_data.php" id="submitform" method="post">
+                                <button type="submit" class="btn btn-success" name="submit">Die über mich gesammelten Daten herunterladen</button>
+                            </form>
+                        </div>
                         <div class="mt-3">
                             <button type="button" class="btn btn-primary" onClick="javascript:window.location.href='` + backurl +
             `'">Zurück</button>
