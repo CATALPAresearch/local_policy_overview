@@ -159,7 +159,21 @@ This software uses the following open source package(s):
 
 **Cite this software:**
 
-tba.
+> Seidel, N., & Heidbrink, R. (2024). Policy Overview - Moodle local plugin for managing agreements to terms of use. https://github.com/CATALPAresearch/local_policy_overview
+
+```
+@misc{Seidel2024-MoodlePolicyOverview,
+abstract = {Policy Overview is a simple plugin that displays the policies a user has or has not agreed to before using the Moodle environment. Policies are typically user agreements, codes of conduct (netiquette), privacy policies or informed consents. By providing an overview of all policies that have been activated, the user is given the opportunity to access the policy text and re-decide whether to withdraw or agree to it. 
+It also enables the user to download all data that has been stored about him/her in Moodle.},
+author = {Seidel, Niels and Heidbrink, Rene},
+keywords = {APLE-II,open access},
+mendeley-tags = {APLE-II,open access},
+title = {{Policy Overview - Moodle local plugin for managing agreements to terms of use.}},
+url = {https://github.com/CATALPAresearch/local{\_}policy{\_}overview},
+year = {2024}
+}
+
+```
 
 
 ## You may also like ...
